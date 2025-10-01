@@ -4,21 +4,19 @@ import os
 import json
 from dotenv import load_dotenv
 
-# Load environment variables from a .env file
+
 load_dotenv()
 
 plans_bp = Blueprint("plans", __name__)
 
-# --- AI Model Configuration ---
-# Your API key should be in a .env file as Plans_API="YOUR_API_KEY"
+
 try:
     api_key = os.getenv("Plans_API")
     if not api_key:
         raise ValueError("API key 'Plans_API' not found in environment variables.")
     genai.configure(api_key=api_key)
 
-    # This system instruction is crucial for getting the desired JSON structure.
-    # It acts as a set of rules for the AI model to follow.
+    
     SYSTEM_INSTRUCTION = (
         "You are a fitness and nutrition plan generator for a test environment. "
         "Your sole purpose is to return valid, well-formed JSON that strictly adheres to the provided schema. "
@@ -58,7 +56,7 @@ except (ValueError, Exception) as e:
     print(f"Error initializing Generative AI Model: {e}")
     model = None
 
-# --- API Route for Plan Generation ---
+
 @plans_bp.route("/api/generate-plan", methods=["POST"])
 def generate_plan():
     """
@@ -100,22 +98,21 @@ def generate_plan():
                 "details": "AI model returned an empty response."
             }), 500
 
-        # The system prompt ensures the response is valid JSON.
-        # We can directly parse and return it.
+        
         plan_json = json.loads(raw_text)
         
-        # Add a success status to the final response
+        
         plan_json["status"] = "success"
 
         return jsonify(plan_json)
 
     except json.JSONDecodeError:
-        # Catch cases where the AI model returns invalid JSON despite the prompt.
+        
         return jsonify({
             "status": "error",
             "details": "AI model returned invalid JSON.",
             "raw_response": raw_text
         }), 500
     except Exception as e:
-        # Catch any other unexpected errors.
+        
         return jsonify({"status": "error", "details": str(e)}), 500
