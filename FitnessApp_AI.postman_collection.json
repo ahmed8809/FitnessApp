@@ -1,0 +1,113 @@
+{
+	"info": {
+		"_postman_id": "190958fa-88eb-464d-a527-733b04488eac",
+		"name": "FitnessApp_AI",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47719023",
+		"_collection_link": "https://ahmedmubark166-4344130.postman.co/workspace/ahmed-mubark's-Workspace~622c07d6-09fd-4083-89b7-bb065ef2fd65/collection/47719023-190958fa-88eb-464d-a527-733b04488eac?action=share&source=collection_link&creator=47719023"
+	},
+	"item": [
+		{
+			"name": "Plan_Generation",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"weight\": 70,\r\n  \"height\": 180,\r\n  \"goal\": \"Bulking\",\r\n  \"culture\": \"Italian\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://ahmedibrahim1.pythonanywhere.com/api/generate-plan",
+					"protocol": "https",
+					"host": [
+						"ahmedibrahim1",
+						"pythonanywhere",
+						"com"
+					],
+					"path": [
+						"api",
+						"generate-plan"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Calories_calc",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "mealImage",
+							"type": "file",
+							"src": "/C:/Users/ahmed/Desktop/istockphoto-1991080791-612x612.jpg"
+						}
+					]
+				},
+				"url": {
+					"raw": "https://ahmedibrahim1.pythonanywhere.com/api/analyze-meal-image",
+					"protocol": "https",
+					"host": [
+						"ahmedibrahim1",
+						"pythonanywhere",
+						"com"
+					],
+					"path": [
+						"api",
+						"analyze-meal-image"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ChatBot",
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {
+					"accept": true
+				}
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"message\": \"hi\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://ahmedibrahim1.pythonanywhere.com/api/chatbot",
+					"protocol": "https",
+					"host": [
+						"ahmedibrahim1",
+						"pythonanywhere",
+						"com"
+					],
+					"path": [
+						"api",
+						"chatbot"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
