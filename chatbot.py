@@ -17,6 +17,7 @@ if not GOOGLE_API_KEY:
 genai.configure(api_key=GOOGLE_API_KEY)
 GEMINI_FLASH_MODEL = "gemini-2.5-flash"
 
+GREETINGS = {"hi", "hello", "hey", "good morning", "good evening", "good afternoon"}
 
 @chatbot_bp.route('/api/chatbot', methods=['POST'])
 def chatbot_query():
@@ -24,7 +25,12 @@ def chatbot_query():
     if not user_data or 'message' not in user_data:
         return jsonify({"error": "Missing 'message' in request body"}), 400
 
-    user_message = user_data['message']
+    user_message = user_data['message'].strip().lower()
+    
+    if any(user_message.startswith(greet) for greet in GREETINGS):
+        return jsonify({
+            "message": "Hello! 👋 I'm your fitness and nutrition assistant. How can I help you today?"
+        }), 200
 
     try:
         bot_response = call_gemini_chatbot(user_message)

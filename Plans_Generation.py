@@ -4,17 +4,70 @@ import os
 import json
 from dotenv import load_dotenv
 
-
+# Load environment variables from a .env file
 load_dotenv()
 
 plans_bp = Blueprint("plans", __name__)
 
+# --- AI Model Configuration ---
+# Your API key should be in a .env file as Plans_API="YOUR_API_KEY"
+try:
+    api_key = os.getenv("Plans_API")
+    if not api_key:
+        raise ValueError("API key 'Plans_API' not found in environment variables.")
+    genai.configure(api_key=api_key)
 
-genai.configure(api_key=os.getenv("Plans_API"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+    # This system instruction is crucial for getting the desired JSON structure.
+    # It acts as a set of rules for the AI model to follow.
+    SYSTEM_INSTRUCTION = (
+        "You are a fitness and nutrition plan generator for a test environment. "
+        "Your sole purpose is to return valid, well-formed JSON that strictly adheres to the provided schema. "
+        "Do not include any explanatory text, markdown formatting, or anything outside of the JSON structure. "
+        "The JSON response MUST contain two top-level keys: 'nutrition' and 'workout'. "
+        "Rules for the JSON structure:"
+        "- Both 'nutrition' and 'workout' must be objects."
+        "- The keys for these objects must be strings from 'day 1' through 'day 7'."
+        "- Each day in 'nutrition' must have an array of meal objects. A meal object is {\"meal\": \"breakfast\", \"food\": \"oats\"}."
+        "- Each day in 'workout' must have an array of exercise objects. An exercise object is {\"exercise\": \"bench press\", \"sets\": 3, \"reps\": 10}. The values for 'sets' and 'reps' MUST strictly be integers. For reps until failure (e.g., 'as many as possible'), use the integer 0."
+        "- For rest days, the workout array should be exactly: [{\"exercise\": \"rest\"}]."
+        "- All keys within the JSON must be lowercase."
+        "- Do not return null values or empty objects. If a day has no plan, omit it."
+        "Example of a valid response format:\n"
+        "{"
+        "  \"nutrition\": {"
+        "    \"day 1\": ["
+        "      {\"meal\": \"breakfast\", \"food\": \"eggs with spinach\"},"
+        "      {\"meal\": \"lunch\", \"food\": \"chicken salad\"}"
+        "    ]"
+        "  },"
+        "  \"workout\": {"
+        "    \"day 1\": ["
+        "      {\"exercise\": \"push-ups\", \"sets\": 3, \"reps\": 15},"
+        "      {\"exercise\": \"squats\", \"sets\": 3, \"reps\": 12}"
+        "    ]"
+        "  }"
+        "}"
+    )
 
+    model = genai.GenerativeModel(
+        "gemini-2.5-flash",
+        system_instruction=SYSTEM_INSTRUCTION
+    )
+
+except (ValueError, Exception) as e:
+    print(f"Error initializing Generative AI Model: {e}")
+    model = None
+
+# --- API Route for Plan Generation ---
 @plans_bp.route("/api/generate-plan", methods=["POST"])
 def generate_plan():
+    """
+    Generates a 7-day fitness and nutrition plan based on user input.
+    The AI model is configured to return a strict JSON schema.
+    """
+    if not model:
+        return jsonify({"status": "error", "details": "AI model not initialized"}), 503
+
     try:
         data = request.json
         weight = data.get("weight")
@@ -22,56 +75,47 @@ def generate_plan():
         goal = data.get("goal")
         culture = data.get("culture")
 
-        if not weight or not height or not goal or not culture:
+        if not all([weight, height, goal, culture]):
             return jsonify({"status": "error", "details": "Missing weight, height, goal, or culture"}), 400
 
-        system_instruction = (
-            "You are generating fictional example fitness and nutrition plans for testing a fitness app. "
-            "Always return ONLY valid JSON. "
-            "Do not add explanations or text outside JSON. "
-            "Meals must reflect the user's culture. "
+        user_prompt = (
+            "Based on the user profile below, generate a complete 7-day plan in JSON format. The plan MUST include BOTH a 'workout' section and a 'nutrition' section.\n"
+            "User Profile:\n"
+            f"- Weight: {weight} kg\n"
+            f"- Height: {height} cm\n"
+            f"- Goal: {goal}\n"
+            f"- Cultural food preference: {culture}\n"
         )
 
-        user_prompt = f"""
-        Create a fictional 1-week workout and nutrition plan as JSON.
-        User:
-        - Weight: {weight} kg
-        - Height: {height} cm
-        - Goal: {goal}
-        - Culture: {culture}
-        """
-
-        
         response = model.generate_content(
-            system_instruction + "\n" + user_prompt,
+            user_prompt,
             generation_config={"response_mime_type": "application/json"}
         )
 
         raw_text = (response.text or "").strip()
 
         if not raw_text:
-            fallback = {
-                "user": {"weight": weight, "height": height, "goal": goal, "culture": culture},
-                "week_plan": [
-                    {
-                        "day": "Monday",
-                        "workouts": [{"exercise": "Push-ups", "sets": 3, "reps": 15}],
-                        "meals": [{"meal": "Breakfast", "food": "Eggs with bread"}]
-                    }
-                ]
-            }
-            return jsonify({"plan": fallback, "status": "success"})
-
-        try:
-            plan_json = json.loads(raw_text)
-        except json.JSONDecodeError:
             return jsonify({
                 "status": "error",
-                "details": "Gemini returned invalid JSON.",
-                "raw_text": raw_text
+                "details": "AI model returned an empty response."
             }), 500
 
-        return jsonify({"plan": plan_json, "status": "success"})
+        # The system prompt ensures the response is valid JSON.
+        # We can directly parse and return it.
+        plan_json = json.loads(raw_text)
+        
+        # Add a success status to the final response
+        plan_json["status"] = "success"
 
+        return jsonify(plan_json)
+
+    except json.JSONDecodeError:
+        # Catch cases where the AI model returns invalid JSON despite the prompt.
+        return jsonify({
+            "status": "error",
+            "details": "AI model returned invalid JSON.",
+            "raw_response": raw_text
+        }), 500
     except Exception as e:
+        # Catch any other unexpected errors.
         return jsonify({"status": "error", "details": str(e)}), 500

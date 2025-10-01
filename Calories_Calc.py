@@ -15,7 +15,7 @@ if not GOOGLE_API_KEY2:
 genai.configure(api_key=GOOGLE_API_KEY2)
 
 
-GEMINI_VISION_MODEL = "gemini-1.5-flash"
+GEMINI_VISION_MODEL = "gemini-2.5-flash"
 
 
 @calories_bp.route('/api/analyze-meal-image', methods=['POST'])
